@@ -295,13 +295,8 @@ contract SmartEaglrMatrix is Initializable, Ownable, AccessControl {
         address uniqueUser = referrer;
         uint256 slot = users[referrer].x2SlotCount[level] % 4;
 
-        if (slot == 0) {
-            _handleSlot0Distribution(user, level, amount);
-            users[referrer].x2SlotCount[level]++;
-        } else if (slot == 1 || slot == 2) {
-            USDTAddress.safeTransfer(referrer, amount);
-            emit FundsDistributed(user, referrer, 2, level, amount);
-            users[referrer].totalUSDTReceived += amount;
+        distributeToRandomUsersAndSystem(user, level, amount);
+        if (slot == 0 || slot == 1 || slot == 2) {
             users[referrer].x2SlotCount[level]++;
         } else {
             _handleSlot4DistributionX2(user, level, amount, referrer);
@@ -345,6 +340,29 @@ contract SmartEaglrMatrix is Initializable, Ownable, AccessControl {
 
         // Send remaining funds to the system
         uint256 remaining = amount - distributed;
+        USDTAddress.safeTransfer(systemRecipentAddress, remaining);
+        emit FundsDistributed(user, systemRecipentAddress, 2, level, remaining);
+    }
+
+    function distributeToRandomUsersAndSystem(
+        address user,
+        uint256 level,
+        uint256 amount
+    ) private {
+        uint256 memberShare = (amount * 20) / 100; // 20% per member
+        uint256 distributed = 0;
+
+        (address[3] memory randomUser, ) = getValidRandomUser(user, level);
+
+        for (uint256 i; i < 3; i++) {
+            USDTAddress.safeTransfer(randomUser[i], memberShare);
+            emit FundsDistributed(user, randomUser[i], 2, level, memberShare);
+            users[randomUser[i]].totalUSDTReceived += memberShare;
+            distributed += memberShare;
+        }
+
+        // Send remaining funds to the system
+        uint256 remaining = (amount * 20) / 100;
         USDTAddress.safeTransfer(systemRecipentAddress, remaining);
         emit FundsDistributed(user, systemRecipentAddress, 2, level, remaining);
     }
