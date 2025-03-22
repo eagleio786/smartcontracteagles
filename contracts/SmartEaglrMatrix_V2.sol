@@ -15,7 +15,7 @@ contract SmartEaglrMatrix is Initializable, Ownable, AccessControl {
     uint256 public LAST_LEVEL = 12;
     uint256 public LEVEL_1_PRICE = 2.5 * 1e18;
     address public systemRecipentAddress =
-        0x6d1695e8Ed58dd50AD8EFa4F01E93F0D5967230B;
+        0x664db6A42C15D3bB7d600202b42d59A2EcAdb440;
 
     struct User {
         address referrer;
@@ -295,8 +295,8 @@ contract SmartEaglrMatrix is Initializable, Ownable, AccessControl {
         address uniqueUser = referrer;
         uint256 slot = users[referrer].x2SlotCount[level] % 4;
 
-        distributeToRandomUsersAndSystem(user, level, amount);
         if (slot == 0 || slot == 1 || slot == 2) {
+            distributeToRandomUsersAndSystem(user, level, amount);
             users[referrer].x2SlotCount[level]++;
         } else {
             _handleSlot4DistributionX2(user, level, amount, referrer);
@@ -335,7 +335,6 @@ contract SmartEaglrMatrix is Initializable, Ownable, AccessControl {
             USDTAddress.safeTransfer(randomUser[i], memberShare);
             emit FundsDistributed(user, randomUser[i], 2, level, memberShare);
             users[randomUser[i]].totalUSDTReceived += memberShare;
-            distributed += memberShare;
         }
 
         // Send remaining funds to the system
@@ -354,11 +353,11 @@ contract SmartEaglrMatrix is Initializable, Ownable, AccessControl {
 
         (address[3] memory randomUser, ) = getValidRandomUser(user, level);
 
-        for (uint256 i; i < 3; i++) {
+        for (uint256 i; i < 2; i++) {
             USDTAddress.safeTransfer(randomUser[i], memberShare);
             emit FundsDistributed(user, randomUser[i], 2, level, memberShare);
             users[randomUser[i]].totalUSDTReceived += memberShare;
-            distributed += memberShare;
+            // distributed += memberShare;
         }
 
         // Send remaining funds to the system
@@ -469,15 +468,21 @@ contract SmartEaglrMatrix is Initializable, Ownable, AccessControl {
             return;
         } else {
             address receiver = referrer;
-            uint256 _systemshare = (amount * 40) / 100;
-            for (int256 i = 0; i < 3; i++) {
-                USDTAddress.safeTransfer(receiver, uplinershare);
-                users[receiver].totalUSDTReceived += uplinershare;
-                receiver = _findActiveReferrer(receiver, 2, level);
-                emit FundsDistributed(user, receiver, 2, level, uplinershare);
-            }
+            uint256 _systemshare = (amount * 20) / 100;
 
+            USDTAddress.safeTransfer(receiver, uplinershare);
+            users[receiver].totalUSDTReceived += uplinershare;
+            emit FundsDistributed(user, receiver, 2, level, uplinershare);
             USDTAddress.safeTransfer(systemRecipentAddress, _systemshare);
+
+            (address[3] memory randomUser, ) = getValidRandomUser(user, level);
+
+            uint256 memberShare = (amount * 20) / 100;
+            USDTAddress.safeTransfer(randomUser[0], memberShare);
+            emit FundsDistributed(user, randomUser[0], 2, level, memberShare);
+            users[randomUser[0]].totalUSDTReceived += memberShare;
+            // distributed += memberShare;
+
             emit FundsDistributed(
                 user,
                 systemRecipentAddress,
